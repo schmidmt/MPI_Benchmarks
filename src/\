@@ -1,0 +1,80 @@
+
+
+#include <iostream>
+#include <getopt.h>
+#include <mpi.h>
+#include <math.h>
+
+//GetOpt Macros
+#define GO_NO_ARG  0
+#define GO_REQ_ARG 1
+#define GO_OPT_ARG 2
+
+
+void peer2peer_datarate(int, int, int, int);
+
+int main(int argc, char **argv) {
+  bool verbose = false;
+  unsigned int MAX_MSG = pow(10,6);
+
+  MPI::Init(argc, argv);
+  int size = MPI::COMM_WORLD.Get_size();
+  int id = MPI::COMM_WORLD.Get_rank();
+
+  // Seperate into root and non-root processes
+  if ( id == 0 ) {
+    // Parse Options
+    //
+    static struct option long_options[] = {
+      {"verbose", GO_NO_ARG, 0, 'v'},
+    };
+    int options_index = 0;
+    int c;
+    while (( c = getopt_long(argc, argv, "v", 
+                 long_options, &options_index)) != -1 ) {
+      switch (c) {
+        case 'v':
+          std::cout << "Verbose output set." << std::endl;
+          verbose = true;
+          break;
+
+        default:
+          std::cout << "Getopt returned unknow caracter code" << c << std::endl;
+        
+      }
+    }
+    
+    if (verbose)
+      std::cout << "Starting with " << size << " processes." << std::endl;
+
+  } else {
+    int *msg;
+    // Non-Root process
+    MPI::Status status;
+    MPI::COMM_WORLD.Recv(msg, MAX_MSG, MPI::INT, MPI::ANY_SOURCE, MPI::ANY_TAG, status);
+  
+  }
+
+  MPI::Finalize();
+  return 0;
+
+}
+
+
+void peer2peer_datarate(int id, int p, int groups, int ipg) {
+  int group, iter;
+  int offset = 2;
+  
+  double time_sum = 0;
+
+  // Run through group of various sizes
+  for ( group = 0 ; group < groups ; ++group) {
+    group_size = pow(2, offset + group);
+
+    for ( iter = 0 ; iter < ipg ; ++iter) {
+      
+    }
+  }
+
+
+}
