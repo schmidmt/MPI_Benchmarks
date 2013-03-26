@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 #include <stdlib.h>
+#include <stdio.h>
 
 //GetOpt Macros
 #define GO_NO_ARG  0
@@ -60,9 +61,10 @@ int main(int argc, char **argv) {
     
     if (verbose)
       std::cout << "Starting with " << size << " processes." << std::endl;
+      std::cout << "Size of Double = " << sizeof(double) << std::endl;
   }
 
-  peer2peer_datarate(id, size, 10, 100);
+  peer2peer_datarate(id, size, 11, 10);
 
 
   MPI::Finalize();
@@ -74,9 +76,10 @@ int main(int argc, char **argv) {
 void peer2peer_datarate(int id, int p, int groups, int ipg) {
   int i;
   int group, iter;
-  int offset = 10;
+  int base = 1024*1024/sizeof(double); 
   double wtime;
   int group_size;
+  int group_data_size;
   MPI::Status status;
   double * data;
   std::vector<double>::iterator it;
@@ -85,8 +88,10 @@ void peer2peer_datarate(int id, int p, int groups, int ipg) {
 
   // Run through group of various sizes
   for ( group = 0 ; group < groups ; ++group) {
-    group_size = (int)pow(2, offset + group);
+    group_size = base*(int)pow(2, group);
+    group_data_size = sizeof(double)*group_size;
     data = new double[group_size];
+    iter_time.clear();
 
     // Run through a set number of iterations
     for ( iter = 0 ; iter < ipg ; ++iter) {
@@ -116,20 +121,23 @@ void peer2peer_datarate(int id, int p, int groups, int ipg) {
 
     }
     if ( id == 0 ) {
+
       // Calculate Mean
       tsum = 0;
       for ( it = iter_time.begin() ; it != iter_time.end() ; ++it) {
-        tsum += (double)sizeof(double)*(double)group_size / *it;
+        tsum += 2*(double)group_data_size / *it;
       }
       tmean = tsum/(double)iter_time.size();
+
       // Calculate STDEV
       tsum = 0;
       for ( it = iter_time.begin() ; it != iter_time.end() ; ++it) {
-        tsum += pow( ((double)sizeof(double)*(double)group_size / *it - tmean), 2);
+        tsum += pow( (2*(double)group_data_size / *it - tmean), 2);
       }
       tstdev = sqrt(tsum/(double)iter_time.size());
 
-      std::cout << (double)sizeof(double)*group_size/GIG << " " << tmean/GIG << " " << tstdev/GIG << std::endl;
+      //std::cout << (double)sizeof(double)*group_size/MEG << " " << tmean/MEG << " " << tstdev/MEG << std::endl;
+      printf("%4d %9g %9g\n",group_data_size/MEG, tmean/MEG, tstdev/MEG);
     }
   }
 }
