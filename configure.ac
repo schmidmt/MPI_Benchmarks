@@ -9,6 +9,9 @@ AC_CONFIG_MACRO_DIR([m4])
 # We're Using C++
 AC_LANG([C++])
 
+# We also require C++11
+AX_CXX_COMPILE_STDCXX_11([ext],[mandatory])
+
 # Required Libraries
 ## Need MATH's pow
 AC_CHECK_LIB([m], [pow])
