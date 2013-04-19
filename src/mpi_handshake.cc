@@ -107,6 +107,14 @@ handshake(void) {
 
   int keep_going = 0;
 
+  std::vector<double> wtime;
+  double wtime_std;
+  double wtime_mean;
+  double * data;
+
+  int msg_length = 10;
+  int msg_iters  = 10;
+
   std::unordered_map<int, std::string> id2name;
 
   /*****************
@@ -217,9 +225,45 @@ handshake(void) {
     
       // Now if this id is lower than the partnet id, this process send first and tracks the time.
       if ( partner > id ) {
-        MPI::COMM_WORLD.Send();
-      } else {
+        data = new double[msg_length];
+        // Create random data
+        for( int i = 0 ; i < msg_length ; ++i ) {
+          data[i] = (float) rand()/(float) RAND_MAX;
+        }
 
+        for ( int msg_iter = 0 ; msg_iter < msg_iters ; ++msg_iter ) {
+          // Save start time
+          wtime.push_back(-1.0*MPI::Wtime());
+
+          // Send then recieve
+          MPI::COMM_WORLD.Send(data, msg_length, MPI::DOUBLE, partner, 0);
+          MPI::COMM_WORLD.Recv(data, msg_length, MPI::DOUBLE, partner, 0, mstatus);
+          
+          // Calculate RTT/2
+          wtime.back() += MPI::Wtime();
+          wtime.back() /= 2;
+        }
+        // Calculate mean and std
+        for ( std::vector<double>::iterator it = wtime.begin() ; it != wtime.end() ; ++it ) {
+          wtime_mean += *it/msg_length;
+          wtime_mean /= wtime.size();
+        }
+        for ( std::vector<double>::iterator it = wtime.begin() ; it != wtime.end() ; ++it ) {
+          wtime_std += pow( (*it - wtime_mean), 2); 
+        }
+        wtime_std = sqrt( wtime_std / wtime.size() );
+
+        // Send Results to root
+        double results[2];
+        results[0] = wtime_mean;
+        results[1] = wtime_std;
+        MPI::COMM_WORLD.Send(results, 2, MPI::DOUBLE, 0, 0);
+      } else {
+        for ( int msg_iter = 0 ; msg_iter < msg_iters ; ++msg_iter ) {
+          // Recieve then Send 
+          MPI::COMM_WORLD.Recv(data, msg_length, MPI::DOUBLE, partner, 0, mstatus);
+          MPI::COMM_WORLD.Send(data, msg_length, MPI::DOUBLE, partner, 0);
+        }
       }
       
 
